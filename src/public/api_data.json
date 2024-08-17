@@ -1,0 +1,19 @@
+{
+    "/nuclei": {
+        "POST": {
+            "access_count": 12,
+            "response_codes": {
+                "403": 3,
+                "201": 9
+            }
+        }
+    },
+    "/apiscan": {
+        "POST": {
+            "access_count": 1,
+            "response_codes": {
+                "201": 1
+            }
+        }
+    }
+}
