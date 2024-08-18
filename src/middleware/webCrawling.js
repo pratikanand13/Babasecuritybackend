@@ -1,21 +1,29 @@
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 
 const webCrawling = async (req, res, next) => {
     try {
         const url = req.user.liveurl;
-        const hawkCommand = `404crawler crawl -u ${url}/sitemap.xml`;
+        const hawkCommand = `404crawler crawl -u https://${url}/sitemap.xml`;
 
         console.log(`Running command: ${hawkCommand}`);
-        console.log(`Environment: ${JSON.stringify(process.env)}`);
+        
+        const process = spawn(hawkCommand, { shell: true });
 
-        exec(hawkCommand, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Execution error: ${error.message}`);
-                return res.status(500).send('Error during process execution');
-            }
+        let stdoutBuffer = [];
 
-            if (stderr) {
-                console.warn(`stderr: ${stderr}`);
+        process.stdout.on('data', (data) => {
+            stdoutBuffer.push(data.toString());
+            console.log(`stdout (chunk received): ${data}`);
+        });
+
+        // Ignore stderr output by not processing it
+        process.stderr.on('data', (data) => {
+            // You can choose to log it if needed, but it will be ignored here
+        });
+
+        process.on('close', (code) => {
+            if (code !== 0) {
+                console.error(`Process exited with code ${code}, but continuing to process stdout.`);
             }
 
             // Function to extract URLs using regex
@@ -25,12 +33,11 @@ const webCrawling = async (req, res, next) => {
             };
 
             // Process the collected stdout data
+            const stdout = stdoutBuffer.join('');
             const extractedUrls = extractUrls(stdout);
             req.apis = extractedUrls; // Load the extracted URLs into req.apis
 
             console.log('Extracted URLs:', req.apis);
-            console.log('Log successfully written to file.');
-
             next(); // Proceed to the next middleware
         });
 

@@ -3,11 +3,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const dashboardSchema = new mongoose.Schema({
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, trim: true, lowercase: true },
-    password: { type: String, required: true, minlength: 7, trim: true },
-    organisationname: { type: String, required: true },
-    organisationgithuburl: { type: String, required: true },
+    name: { type: String,  trim: true },
+    email: { type: String,  unique: true, trim: true, lowercase: true },
+    password: { type: String, minlength: 7, trim: true },
+    organisationname: { type: String },
+    organisationgithuburl: { type: String },
     liveurl: { type: String },
     tokens: [{
         token: { type: String, required: true }
