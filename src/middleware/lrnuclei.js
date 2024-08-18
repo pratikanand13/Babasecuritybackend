@@ -1,6 +1,6 @@
 const { spawn } = require('child_process');
+const fs = require('fs');
 const path = require('path');
-
 
 const lrnuclei = async (req, res, next) => {
     try {
@@ -8,15 +8,12 @@ const lrnuclei = async (req, res, next) => {
         const tag = req.body.tag;
         const severity = req.body.severity;
         const wslDistribution = 'Ubuntu-22.04';
-
-        // Get the venv path dynamically and convert to WSL format
-       
-
-        const nucleiCommand = `nuclei -u ${url} -tags ${tag} -severity ${severity}`;
+        const venvPath = '/mnt/c/Users/prati/infosec/venv/bin/activate';
+        const nucleiCommand = `nuclei -u ${url} -tags ${tag} -severity ${severity} `;
         console.log(nucleiCommand);
-
         const ansiRegex = (await import('ansi-regex')).default;
 
+        // Function to extract issues and return as an array
         function extractIssues(data) {
             const patterns = [
                 /missing-sri/g,
@@ -33,29 +30,28 @@ const lrnuclei = async (req, res, next) => {
             patterns.forEach(pattern => {
                 const match = data.match(pattern);
                 if (match) {
-                    results.push(match[0]);
+                    results.push(match[0]); // Add found issue
                 } else {
-                    results.push("");
+                    results.push(""); // Push empty string if no match found
                 }
             });
-            return results;
+            return results; // Return array of results
         }
 
+        // Start WSL session using spawn
         console.log(`Starting WSL session with distribution: ${wslDistribution}`);
         const wslProcess = spawn('wsl', ['-d', wslDistribution], { shell: true });
 
         let stdoutBuffer = [];
         let stderrBuffer = [];
-        let datacopyBuffer = [];
 
         wslProcess.stdout.on('data', (data) => {
-            datacopyBuffer.push(data);
             const cleanedData = data.toString('utf8')
                 .replace(ansiRegex(), '')
                 .replace(/[\\"]/g, '\\$&')
                 .replace(/\u0000/g, '\\u0000');
             stdoutBuffer.push(cleanedData);
-            console.log(`WSL stdout (chunk received): ${data}`);
+            console.log(`WSL stdout (chunk received): ${cleanedData}`);
         });
 
         wslProcess.stderr.on('data', (data) => {
@@ -65,8 +61,7 @@ const lrnuclei = async (req, res, next) => {
 
         wslProcess.on('spawn', () => {
             console.log('WSL session started. Activating virtual environment and running vulnapi scan...');
-            // Use the Linux-style path for WSL
-            wslProcess.stdin.write(`${nucleiCommand}`);
+            wslProcess.stdin.write(`source ${venvPath} && ${nucleiCommand}\n`);
             wslProcess.stdin.end();
         });
 
@@ -76,21 +71,18 @@ const lrnuclei = async (req, res, next) => {
                 return res.status(500).send('Error during WSL process execution');
             }
 
-            const dataCopy = Buffer.concat(datacopyBuffer).toString('utf8');
+            // Combine stdout, extract issues, and format for output
             const stdout = stdoutBuffer.join('');
             const extractedIssues = extractIssues(stdout);
             const stderr = stderrBuffer.join('');
-            const fullcmd = stderr + dataCopy;
-
             req.stdout = stdout;
-            req.extractedIssues = extractedIssues;
+            req.extractedIssues = extractedIssues; // Store array in request
             req.stderr = stderr;
-            req.fullcmd = fullcmd;
-            next();
+
+            next(); // Proceed to the next middleware or route handler
         });
     } catch (error) {
         res.status(403).send(error);
     }
-};
-
+}
 module.exports = lrnuclei;

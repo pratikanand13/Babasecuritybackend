@@ -4,9 +4,9 @@ const dashboardSchema = require('../models/dashboardSchema')
 const auth = async(req,res,next) =>
 {
     try{
-        
+        console.log('1')
         const token = req.header('Authorization').replace('Bearer ','')
-        const decoded = jwt.verify(token , 'flipkart')
+        const decoded = jwt.verify(token , 'secretkey')
         
         const user = await dashboardSchema.findOne({
             _id : decoded._id,

@@ -1,0 +1,102 @@
+{
+    "/nuclei": {
+        "POST": {
+            "access_count": 123,
+            "response_codes": {
+                "403": 3,
+                "201": 77,
+                "500": 41,
+                "401": 2
+            }
+        }
+    },
+    "/apiscan": {
+        "POST": {
+            "access_count": 1,
+            "response_codes": {
+                "201": 1
+            }
+        }
+    },
+    "/webcrawling": {
+        "POST": {
+            "access_count": 4,
+            "response_codes": {
+                "201": 4
+            }
+        }
+    },
+    "/bearer": {
+        "POST": {
+            "access_count": 82,
+            "response_codes": {
+                "500": 56,
+                "201": 26
+            }
+        }
+    },
+    "/vulnapi": {
+        "POST": {
+            "access_count": 4,
+            "response_codes": {
+                "404": 4
+            }
+        }
+    },
+    "/testapi": {
+        "POST": {
+            "access_count": 3,
+            "response_codes": {
+                "201": 3
+            }
+        }
+    },
+    "/apilinks": {
+        "GET": {
+            "access_count": 12,
+            "response_codes": {
+                "200": 12
+            }
+        }
+    },
+    "/signUp": {
+        "GET": {
+            "access_count": 1,
+            "response_codes": {
+                "404": 1
+            }
+        },
+        "POST": {
+            "access_count": 3,
+            "response_codes": {
+                "404": 3
+            }
+        }
+    },
+    "/user/signUp": {
+        "POST": {
+            "access_count": 2,
+            "response_codes": {
+                "400": 1,
+                "201": 1
+            }
+        }
+    },
+    "/user/me": {
+        "GET": {
+            "access_count": 6,
+            "response_codes": {
+                "401": 5,
+                "200": 1
+            }
+        }
+    },
+    "/user/login": {
+        "POST": {
+            "access_count": 1,
+            "response_codes": {
+                "200": 1
+            }
+        }
+    }
+}

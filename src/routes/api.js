@@ -25,21 +25,20 @@
             res.status(403).send("Dashboard Down");
         }
     });
-    router.post('/webcrawling', webCrawling, async (req, res) => {
+    router.post('/apiDiscovery',auth,webCrawling, async (req, res) => {
         try {
             console.log(1)
-            const data = req.stdout
+            const data = req.apis
             console.log("data",data)
-            const review = storeLinksAndData(data)
-            const link = await storeLinksAndData(data);
-            console.log(link);
+            // const link = await storeLinksAndData(data);
+            // console.log(link);
 
-            const newEntry = new apiStore({
-                links: link.links.links
-            });
+            // const newEntry = new apiStore({
+            //     links: link.links.links
+            // });
 
-            const response = await newEntry.save();
-            res.status(201).send(response);
+            // const response = await newEntry.save();
+            res.status(201).send(data);
         } catch (error) {
             console.error('Caught error:', error);
             res.status(500).send("Internal Server Error");
@@ -85,33 +84,35 @@
     });
     
     
-    router.post('/nuclei', lrnuclei, async (req, res) => {
+    router.post('/nuclei',auth, lrnuclei, async (req, res) => {
         try {
             const parsedStdout = req.stdout;
-            const extractedIssues = req.extractedIssues;
-            const { severity, tag } = req.body;
-            const url = req.body.url;
-            let urlDocument = await nucleiSchema.findOne({ url });
-    
-            if (!urlDocument) {
-                urlDocument = new nucleiSchema({
-                    url,
-                    records: []
+        const extractedIssues = req.extractedIssues; // This is an array
+        const { severity, tag } = req.body;
+        const url = req.body.url;
+        let urlDocument = await nucleiSchema.findOne({ url });
+
+        if (!urlDocument) {
+            // If no document is found, create a new one
+            urlDocument = new nucleiSchema({
+                url,
+                records: []
+            });
+        }
+
+        // Iterate over each issue in the extractedIssues array and add it to the document
+        extractedIssues.forEach(issue => {
+            if (issue) { // Only add if issue is not an empty string
+                urlDocument.records.push({
+                    name: issue, // Using the issue as the name
+                    tag,
+                    severity
                 });
             }
-            extractedIssues.forEach(issue => {
-                if (issue) { 
-                    urlDocument.records.push({
-                        name: issue, 
-                        tag,
-                        severity
-                    });
-                }
-            });
-    
-            await urlDocument.save();
-    
-            res.status(201).send(req.fullcmd); 
+        });
+
+        await urlDocument.save();
+        res.status(201).send(extractedIssues)
         } catch (e) {
             console.error(e);
             res.status(500).send("Internal Server Error");

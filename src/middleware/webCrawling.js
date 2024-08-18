@@ -2,19 +2,24 @@ const { spawn } = require('child_process');
 
 const webCrawling = async (req, res, next) => {
     try {
-        const url = req.body.url;
+        const url = req.user.liveurl;
         const wslDistribution = 'Ubuntu-22.04';
         const venvPath = '/mnt/c/Users/prati/infosec/venv/bin/activate';
-        const hawkCommand = `echo ${url} | docker run --rm -i hakluke/hakrawler -subs`;
-
+        const hawkCommand = `404crawler crawl -u ${url}/sitemap.xml`;
         console.log(`Starting WSL session with distribution: ${wslDistribution}`);
         const wslProcess = spawn('wsl', ['-d', wslDistribution], { shell: true });
 
         let stdoutBuffer = [];
         let stderrBuffer = [];
 
+        // Function to extract URLs using regex
+        const extractUrls = (crawlOutput) => {
+            const urlPattern = /https:\/\/[^\s]+/g;
+            return crawlOutput.match(urlPattern) || [];
+        };
+
         wslProcess.stdout.on('data', (data) => {
-            stdoutBuffer.push(data); 
+            stdoutBuffer.push(data);
             console.log(`WSL stdout (chunk received): ${data}`);
         });
 
@@ -25,7 +30,7 @@ const webCrawling = async (req, res, next) => {
 
         wslProcess.on('spawn', () => {
             console.log('WSL session started. Activating virtual environment and running hakrawler...');
-            wslProcess.stdin.write(`source ${venvPath} && ${hawkCommand}\n`);
+            wslProcess.stdin.write(`${hawkCommand}\n`);
             wslProcess.stdin.end();
         });
 
@@ -35,14 +40,18 @@ const webCrawling = async (req, res, next) => {
                 return res.status(500).send('Error during WSL process execution');
             }
 
-            const stdout = Buffer.concat(stdoutBuffer).toString('utf8'); 
+            const stdout = Buffer.concat(stdoutBuffer).toString('utf8');
             const stderr = stderrBuffer.join('');
             console.log('Hakrawler execution completed successfully. Processing output...');
-            console.log("Stdout", stdout);
+
+            // Extract URLs from stdout
+            const extractedUrls = extractUrls(stdout);
+            req.apis = extractedUrls; // Load the extracted URLs into req.apis
+
+            console.log('Extracted URLs:', req.apis);
             req.stdout = stdout;
-            console.log(req.stdout)
             req.stderr = stderr;
-            next(); 
+            next();
         });
 
     } catch (error) {

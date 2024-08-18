@@ -1,14 +1,22 @@
 const mongoose = require('mongoose');
 
-const apiStore = new mongoose.Schema({
-    links: [{
+const apiStoreSchema = new mongoose.Schema({
+    apiName: [{
         type: String,
         trim: true
-    }]
+    }],
+    name: {
+        type: String,
+        required: true
+    },
+    githublink: {
+        type: String,
+        required: true
+    }
 }, {
     timestamps: true
 });
 
-const Apistore = mongoose.model('apiStore', apiStore);
+const ApiStore = mongoose.model('ApiStore', apiStoreSchema);
 
-module.exports = Apistore;
+module.exports = ApiStore;

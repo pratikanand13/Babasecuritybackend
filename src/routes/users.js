@@ -3,7 +3,7 @@ const router = new express.Router();
 const auth = require('../middleware/dashboardAuth');
 const Dashboard = require("../models/dashboardSchema");
 
-// User Sign-Up
+
 router.post("/user/signUp", async (req, res) => {
     const user = new Dashboard(req.body);
     try {
@@ -15,7 +15,6 @@ router.post("/user/signUp", async (req, res) => {
     }
 });
 
-// User Update
 router.patch('/user/update', auth, async (req, res) => {
     const updates = Object.keys(req.body);
     const allowedUpdates = ['name', 'email', 'password', 'age'];
@@ -32,12 +31,11 @@ router.patch('/user/update', auth, async (req, res) => {
     }
 });
 
-// User Login
 router.post('/user/login', async (req, res) => {
     try {
         const user = await Dashboard.findbyCredentials(req.body.email, req.body.password);
         const token = await user.generateAuthToken();
-        res.send({ user, token });
+        res.status(200).send({ user, token });
     } catch (e) {
         res.status(400).send(e.message);
     }
