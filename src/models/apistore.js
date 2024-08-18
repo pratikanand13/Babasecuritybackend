@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const recordSchema = require('./nucleiSchema');  // Import your recordSchema
 
 const apiStoreSchema = new mongoose.Schema({
-    apiName: [String],
+    apiName: [{ type: String, required: true }],
     records: [{
         apiName: String,
         name: String,
