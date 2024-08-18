@@ -17,7 +17,7 @@
     const clearDir = require('../utils/clearDir')
     const getOwaspCategoryForCwe = require('../utils/cwetoOwasp')
     const mongoose = require('mongoose')
-    const { ObjectId } = mongoose.Types;
+    const sastThird = require('../middleware/thirdpartysas')
 
     router.use(logMiddleware);
     router.post('/testapi', vulnapi,modifyTxt, async (req, res) => {
@@ -223,6 +223,15 @@
         }
     });
     
+    router.post("/thirdpartySast" ,sastThird, async(req,res) =>{
+        try{
+            const extractedIssues = req.extractedIssues
+            const termOut = req.terminalOut
+            res.status(200).send({extractedIssues,termOut})
+        } catch(error) {
+            res.status(404).send({error})
+        }
+    })
     
     
     module.exports = router;

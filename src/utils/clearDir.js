@@ -1,32 +1,14 @@
-const fs = require('fs').promises;
+const fs = require('fs');
 const path = require('path');
 
-const clearDir = async (name) => {
-    const dirPath = path.resolve(__dirname, '../../', name); 
+function removeFolder(folderPath) {
     try {
-        const dirExists = await fs.stat(dirPath);
-
-        if (dirExists) {
-            const files = await fs.readdir(dirPath);
-            for (const file of files) {
-                const currentPath = path.join(dirPath, file);
-                const stats = await fs.lstat(currentPath);
-
-                if (stats.isDirectory()) {
-                    await clearDir(currentPath);
-                } else {
-                    await fs.unlink(currentPath);
-                }
-            }
-            await fs.rmdir(dirPath);  
-        }
-    } catch (error) {
-        if (error.code === 'ENOENT') {
-            console.log(`Directory not found: ${dirPath}`);
-        } else {
-            console.error(`Error clearing directory: ${error.message}`);
-        }
+        // Remove the folder and all its contents
+        fs.rmSync(folderPath, { recursive: true, force: true });
+        console.log(`Folder '${folderPath}' removed successfully.`);
+    } catch (err) {
+        console.error(`Error while removing folder '${folderPath}':`, err);
     }
-};
+}
 
-module.exports = clearDir;
+module.exports = removeFolder
