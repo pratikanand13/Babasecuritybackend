@@ -50,10 +50,6 @@ RUN apt-get update && apt-get install -y \
     libx264-160 \
     docker.io
 
-# Placeholder: Install vulnapi (alternative method)
-# For example, if vulnapi provides a direct download, you can use:
-# RUN curl -L -o /usr/local/bin/vulnapi https://vulnapi.example.com/download/latest && chmod +x /usr/local/bin/vulnapi
-
 # Add Bearer repository and install Bearer
 RUN echo "deb [trusted=yes] https://apt.fury.io/bearer/ /" | tee /etc/apt/sources.list.d/fury.list
 RUN apt-get update && apt-get install -y bearer
@@ -67,8 +63,7 @@ COPY . .
 # Expose the port your app runs on
 EXPOSE 3000
 
-# Copy custom entrypoint script
-COPY entrypoint.sh /usr/src/app/entrypoint.sh
+# Ensure entrypoint script has execution permissions
 RUN chmod +x /usr/src/app/entrypoint.sh
 
 # Define the entrypoint script as the container's entrypoint
