@@ -15,6 +15,7 @@
     const extract = require('../utils/extract')
     const ScanResult = require('../models/bearerSchema')
     const clearDir = require('../utils/clearDir')
+    const apistore = require('../models/apistore')
     router.use(logMiddleware);
     router.post('/testapi', vulnapi,modifyTxt, async (req, res) => {
         try {
@@ -25,25 +26,45 @@
             res.status(403).send("Dashboard Down");
         }
     });
-    router.post('/apiDiscovery',auth,webCrawling, async (req, res) => {
+    router.post('/apiDiscovery', auth, async (req, res) => {
         try {
-            console.log(1)
-            const data = req.apis
-            console.log("data",data)
-            // const link = await storeLinksAndData(data);
-            // console.log(link);
-
-            // const newEntry = new apiStore({
-            //     links: link.links.links
-            // });
-
-            // const response = await newEntry.save();
-            res.status(201).send(data);
+            console.log('Request received');
+            
+            // Extract data from request body
+            const data = req.body;  // Assuming data is coming from req.body
+            console.log('Incoming data:', data);  // Log incoming data for debugging
+    
+            const organisationId = req.user._id;  // Assuming organisationId comes from the authenticated user
+    
+            if (!data.name || !data.githublink || !data.livelink || !organisationId) {
+                return res.status(400).send({
+                    error: 'Missing required fields: name, githublink, livelink, or organisationId'
+                });
+            }
+    
+            // Validate that apis is an array
+            if (!Array.isArray(data.apis)) {
+                return res.status(400).send({ error: 'apis must be an array' });
+            }
+    
+            // Create a new entry in the ApiStore
+            const newEntry = new apiStore({
+                apiName: data.apis,  // Assign the apis array to apiName
+                name: data.name,
+                githublink: data.githublink,
+                livelink: data.livelink,
+                organisationId: organisationId  // Use the authenticated user's organisationId
+            });
+    
+            // Save the entry to the database
+            const response = await newEntry.save();
+            res.status(201).send(response);  // Return the saved document as the response
         } catch (error) {
             console.error('Caught error:', error);
-            res.status(500).send("Internal Server Error");
+            res.status(500).send({ error: "Internal Server Error" });
         }
     });
+    
     router.get('/apilinks', async (req, res) => {
         try {
             const links = await apiStore.find();
@@ -53,35 +74,43 @@
             res.status(500).send("Internal Server Error");
         }
     });
-    router.post('/bearer', sastBearer, async (req, res) => {
+    router.get('/bearer', auth, sastBearer, async (req, res) => {
         try {
-            const data = req.scanResults;
-            const orgname = req.body.name;
-            const restructuredData = {
-                name: orgname,  
-                CRITICAL: data["CRITICAL:"] || [],
-                HIGH: data["HIGH:"] || [],
-                MEDIUM: data["MEDIUM:"] || [],
-                LOW: data["LOW:"] || []
-            };
+            const stdout = req.stdout;  
+            const severityIssues = req.scanResults
+            console.log("seveirtyissue",severityIssues['HIGH:'])
+            const githubOrgName = req.user.organisationname;  
+            const githubLink = req.user.organisationgithuburl;  
+            const uid = req.user._id;
     
+            const restructuredData = {
+                organisationId: uid,
+                githubOrgName: githubOrgName,  
+                githubLink: githubLink,  
+                CRITICAL: severityIssues['CRITICAL:'] || [],  
+                HIGH: severityIssues['HIGH:'] || [],  
+                MEDIUM: severityIssues['MEDIUM:'] || [], 
+                LOW: severityIssues['LOW:'] || []  
+            };
             console.log(restructuredData);
             const scanResult = new ScanResult(restructuredData);
             await scanResult.save();
             const apiResponse = {
-                name: restructuredData.name,
+                name: githubOrgName,
                 CRITICAL: restructuredData.CRITICAL.join(', '),
                 HIGH: restructuredData.HIGH.join(', '),
                 MEDIUM: restructuredData.MEDIUM.join(', '),
                 LOW: restructuredData.LOW.join(', ')
             };
-            await clearDir(orgname)
-            res.status(201).send(req.dataCopy);
+    
+            await clearDir(githubOrgName);
+            res.status(201).send(apiResponse);
         } catch (error) {
             console.error(error);
             res.status(500).send("Internal Server Error");
         }
     });
+    
     
     
     router.post('/nuclei',auth, lrnuclei, async (req, res) => {

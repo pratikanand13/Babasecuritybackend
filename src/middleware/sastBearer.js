@@ -2,8 +2,8 @@ const { spawn } = require('child_process');
 
 const sastBearer = async (req, res, next) =>{
     try{
-        const githubLink = req.body.url
-        const githubName = req.body.name
+        const githubLink = req.user.organisationgithuburl
+        const githubName = req.user.organisationname
         const wslDistribution = 'Ubuntu-22.04'
         const gitClone = `git clone ${githubLink}`
         const bearerCommand = `bearer scan ${githubName}`
@@ -47,17 +47,22 @@ const sastBearer = async (req, res, next) =>{
             const severityIssues = {};
 
             for (let i = 0; i < severityEntries.length; i += 2) {
-                const label = severityEntries[i].trim();
-                const content = severityEntries[i + 1].trim();
-                if (!severityIssues[label]) {
-                    severityIssues[label] = [];
-                }
-                severityIssues[label].push(content);
+            const label = severityEntries[i].trim();  // Severity level (e.g., CRITICAL, HIGH, etc.)
+            const content = severityEntries[i + 1].trim();  // The content following the severity level
+    
+            // If the label doesn't exist in the severityIssues object, initialize it as an empty array
+            if (!severityIssues[label]) {
+            severityIssues[label] = [];
             }
-            req.dataCopy = dataCopy
+
+    // Add the entire content block as a single string to the corresponding severity level
+        severityIssues[label].push(content);
+}
+
+// Store the parsed data in req.scanResults
             req.scanResults = severityIssues;
             req.stdout = stdout;
-            console.log(req.stdout)
+            // console.log("scanres",req.scanResults)
             req.stderr = stderr;
             next(); 
         });

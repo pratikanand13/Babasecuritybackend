@@ -1,13 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 
-# Start the Docker service
-service docker start
+# Start the Node.js application in the background
+node app.js &
 
-# Run hakrawler container
-docker run --rm -i hakluke/hakrawler --help
+# Run the nuclei Docker image with any necessary arguments
+docker run --rm projectdiscovery/nuclei:latest nuclei -v &
 
-# Run nuclei container
-docker run projectdiscovery/nuclei:latest
-
-# Start the Node.js application
-exec "$@"
+# Wait for all background processes to complete
+wait

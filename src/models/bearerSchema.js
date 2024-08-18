@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const scanResultSchema = new mongoose.Schema({
-  name: { type: String, required: true },
   organisationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Dashboard',

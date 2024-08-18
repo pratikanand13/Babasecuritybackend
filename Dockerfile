@@ -1,41 +1,51 @@
-FROM nikolaik/python-nodejs
+# Use an official Node.js runtime as a parent image
+FROM node:16
 
-# Install Docker CLI in the container
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install Node.js dependencies
+RUN npm install
+
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    docker.io git curl python3-pip ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    apt-transport-https \
+    libxcursor1 \
+    libxdamage1 \
+    libgtk-3-0 \
+    libpangocairo-1.0-0 \
+    libpango-1.0-0 \
+    libcairo-gobject2 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0  # Corrected package name
 
-# Install npm dependencies
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm config set fetch-retry-mintimeout 20000 \
-    && npm config set fetch-retry-maxtimeout 120000 \
-    && npm install
+# Placeholder: Install vulnapi (alternative method)
+# For example, if vulnapi provides a direct download, you can use:
+# RUN curl -L -o /usr/local/bin/vulnapi https://vulnapi.example.com/download/latest && chmod +x /usr/local/bin/vulnapi
 
-# Install pip packages
-RUN pip3 install watchdog
+# Add Bearer repository and install Bearer
+RUN echo "deb [trusted=yes] https://apt.fury.io/bearer/ /" | tee /etc/apt/sources.list.d/fury.list
+RUN apt-get update && apt-get install -y bearer
 
-# Install Bearer directly from GitHub
-RUN curl -L https://github.com/Bearer/bearer/releases/latest/download/bearer-linux-amd64 -o /usr/local/bin/bearer \
-    && chmod +x /usr/local/bin/bearer
+# Install Playwright dependencies and Playwright itself
+RUN npx playwright install-deps
+RUN npx playwright install
 
-# Return to the app directory
-WORKDIR /app
+# Pull the latest Nuclei Docker image
+RUN docker pull projectdiscovery/nuclei:latest
 
-# Copy the remaining application files
+# Copy the rest of the application code
 COPY . .
 
-# Expose the port for the application
+# Expose the port your app runs on
 EXPOSE 3000
 
-# Set up Docker-in-Docker environment
-VOLUME /var/lib/docker
-ENV DOCKER_HOST=unix:///var/run/docker.sock
+# Copy custom entrypoint script
+COPY entrypoint.sh /usr/src/app/entrypoint.sh
+RUN chmod +x /usr/src/app/entrypoint.sh
 
-# Set up the entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Define the entrypoint and the default command
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["npm", "run", "dev"]
+# Define the entrypoint script as the container's entrypoint
+ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
