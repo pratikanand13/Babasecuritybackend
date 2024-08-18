@@ -15,7 +15,10 @@
     const extract = require('../utils/extract')
     const ScanResult = require('../models/bearerSchema')
     const clearDir = require('../utils/clearDir')
-    const apistore = require('../models/apistore')
+    const getOwaspCategoryForCwe = require('../utils/cwetoOwasp')
+    const mongoose = require('mongoose')
+    const { ObjectId } = mongoose.Types;
+
     router.use(logMiddleware);
     router.post('/testapi', vulnapi,modifyTxt, async (req, res) => {
         try {
@@ -29,36 +32,41 @@
     router.post('/apiDiscovery', auth, async (req, res) => {
         try {
             console.log('Request received');
-            
-            // Extract data from request body
-            const data = req.body;  // Assuming data is coming from req.body
-            console.log('Incoming data:', data);  // Log incoming data for debugging
-    
-            const organisationId = req.user._id;  // Assuming organisationId comes from the authenticated user
-    
+            const data = req.body;  
+            console.log('Incoming data:', data); 
+        
+            const organisationId = req.user._id; 
+        
+            // Check for required fields
             if (!data.name || !data.githublink || !data.livelink || !organisationId) {
                 return res.status(400).send({
                     error: 'Missing required fields: name, githublink, livelink, or organisationId'
                 });
             }
     
-            // Validate that apis is an array
+            // Ensure apis is an array
             if (!Array.isArray(data.apis)) {
                 return res.status(400).send({ error: 'apis must be an array' });
             }
     
-            // Create a new entry in the ApiStore
+            // Prepare the apiName array with API URLs and empty records
+            const apiName = data.apis.map(api => ({
+                api: api.url,  // API URL
+                records: []    // Empty array for records initially
+            }));
+    
+            // Create a new entry for ApiStore
             const newEntry = new apiStore({
-                apiName: data.apis,  // Assign the apis array to apiName
+                apiName: apiName,
                 name: data.name,
                 githublink: data.githublink,
                 livelink: data.livelink,
-                organisationId: organisationId  // Use the authenticated user's organisationId
+                organisationId: organisationId 
             });
     
-            // Save the entry to the database
+            // Save the new entry
             const response = await newEntry.save();
-            res.status(201).send(response);  // Return the saved document as the response
+            res.status(201).send(response); 
         } catch (error) {
             console.error('Caught error:', error);
             res.status(500).send({ error: "Internal Server Error" });
@@ -76,35 +84,114 @@
     });
     router.get('/bearer', auth, sastBearer, async (req, res) => {
         try {
-            const stdout = req.stdout;  
-            const severityIssues = req.scanResults
-            console.log("seveirtyissue",severityIssues['HIGH:'])
-            const githubOrgName = req.user.organisationname;  
+            const stdout = req.stdout;
+            const severityIssues = req.severityIssues;
             const githubLink = req.user.organisationgithuburl;  
-            const uid = req.user._id;
+            const githubOrgName = req.user.organisationname;  
     
+            const history = await ScanResult.findOne({ githubOrgName });
+    
+            // if (!history) {
+            //     return res.status(404).send("History not found for the organization");
+            // }
+    
+            // console.log("History:", history);
+    
+            // const fixedIssues = [];
+    
+            // // Function to find fixed issues
+            // const findFixedIssues = (previous, current) => {
+            //     return [...previous].filter(issue => !current.has(issue));
+            // };
+    
+            // // Processing CRITICAL issues
+            // if (Array.isArray(history.CRITICAL) && Array.isArray(severityIssues['CRITICAL:'])) {
+            //     const historyCriticalSet = new Set(history.CRITICAL);
+            //     const severityCriticalSet = new Set(severityIssues['CRITICAL:']);
+            //     fixedIssues.push(...findFixedIssues(historyCriticalSet, severityCriticalSet));
+            // }
+    
+            // // Processing HIGH issues
+            // if (Array.isArray(history.HIGH) && Array.isArray(severityIssues['HIGH:'])) {
+            //     const historyHighSet = new Set(history.HIGH);
+            //     const severityHighSet = new Set(severityIssues['HIGH:']);
+            //     fixedIssues.push(...findFixedIssues(historyHighSet, severityHighSet));
+            // }
+    
+            // // Processing MEDIUM issues
+            // if (Array.isArray(history.MEDIUM) && Array.isArray(severityIssues['MEDIUM:'])) {
+            //     const historyMediumSet = new Set(history.MEDIUM);
+            //     const severityMediumSet = new Set(severityIssues['MEDIUM:']);
+            //     fixedIssues.push(...findFixedIssues(historyMediumSet, severityMediumSet));
+            // }
+    
+            // // Processing LOW issues
+            // if (Array.isArray(history.LOW) && Array.isArray(severityIssues['LOW:'])) {
+            //     const historyLowSet = new Set(history.LOW);
+            //     const severityLowSet = new Set(severityIssues['LOW:']);
+            //     fixedIssues.push(...findFixedIssues(historyLowSet, severityLowSet));
+            // }
+    
+            // console.log("Fixed Issues:", fixedIssues);
+    
+            // Restructuring data to store in the database
+            const uid = req.user._id;
             const restructuredData = {
                 organisationId: uid,
-                githubOrgName: githubOrgName,  
-                githubLink: githubLink,  
-                CRITICAL: severityIssues['CRITICAL:'] || [],  
-                HIGH: severityIssues['HIGH:'] || [],  
-                MEDIUM: severityIssues['MEDIUM:'] || [], 
-                LOW: severityIssues['LOW:'] || []  
+                githubOrgName: githubOrgName,
+                githubLink: githubLink,
+                CRITICAL: severityIssues['CRITICAL:'] || [],
+                HIGH: severityIssues['HIGH:'] || [],
+                MEDIUM: severityIssues['MEDIUM:'] || [],
+                LOW: severityIssues['LOW:'] || []
             };
-            console.log(restructuredData);
-            const scanResult = new ScanResult(restructuredData);
-            await scanResult.save();
+    
+            console.log("Restructured Data:", restructuredData);
+    
+            // Update or insert the scan result in the database
+            await ScanResult.findOneAndUpdate(
+                { githubLink },
+                { $set: restructuredData },
+                { new: true, upsert: true }
+            );
+    
             const apiResponse = {
                 name: githubOrgName,
                 CRITICAL: restructuredData.CRITICAL.join(', '),
                 HIGH: restructuredData.HIGH.join(', '),
                 MEDIUM: restructuredData.MEDIUM.join(', '),
-                LOW: restructuredData.LOW.join(', ')
+                LOW: restructuredData.LOW.join(', '),
+                termOut: req.termOut ,
+                history : history
             };
     
+            // Extract CWE codes using regex and map to OWASP categories
+            const cweRegex = /CWE-\d{3}/g;
+            const cweCodes = stdout.match(cweRegex) || [];
+            const uniqueCweCodes = [...new Set(cweCodes)];
+            console.log("Extracted CWE Codes:", uniqueCweCodes);
+    
+            let dataout = [];
+            for (let i = 0; i < uniqueCweCodes.length; i++) {
+                dataout.push(getOwaspCategoryForCwe(uniqueCweCodes[i]));
+            }
+    
+            // Prepare the payload
+            const payload = {
+                name: githubOrgName,
+                history: history,
+                termOut: req.termOut,
+                owaspData: dataout,
+                CRITICAL: severityIssues['CRITICAL:'] || [],
+                HIGH: severityIssues['HIGH:'] || [],
+                MEDIUM: severityIssues['MEDIUM:'] || [],
+                LOW: severityIssues['LOW:'] || []
+            };
+    
+            // Clean up and send response
             await clearDir(githubOrgName);
-            res.status(201).send(apiResponse);
+            res.status(201).send({ payload });
+    
         } catch (error) {
             console.error(error);
             res.status(500).send("Internal Server Error");
@@ -113,38 +200,29 @@
     
     
     
-    router.post('/nuclei',auth, lrnuclei, async (req, res) => {
+
+    
+    const Record = mongoose.model('Record', nucleiSchema);
+    
+    router.post('/nuclei', auth, lrnuclei, async (req, res) => {
         try {
-            const parsedStdout = req.stdout;
-        const extractedIssues = req.extractedIssues; // This is an array
-        const { severity, tag } = req.body;
-        const url = req.body.url;
-        let urlDocument = await nucleiSchema.findOne({ url });
-
-        if (!urlDocument) {
-            // If no document is found, create a new one
-            urlDocument = new nucleiSchema({
-                url,
-                records: []
-            });
-        }
-
-        // Iterate over each issue in the extractedIssues array and add it to the document
-        extractedIssues.forEach(issue => {
-            if (issue) { // Only add if issue is not an empty string
-                urlDocument.records.push({
-                    name: issue, // Using the issue as the name
-                    tag,
-                    severity
-                });
-            }
-        });
-
-        await urlDocument.save();
-        res.status(201).send(extractedIssues)
+            const { severity, tag, url } = req.body;
+            const extractedIssues = req.extractedIssues.filter(issue => issue.trim() !== "")
+            const terminal = req.terminalOut; 
+            const normalizedUrl = url; 
+            const payload = {
+                name: req.stdout,
+                terminalOut: terminal,
+                extractedIssues:extractedIssues,
+                url: normalizedUrl
+            };
+            res.status(201).send({ payload });
         } catch (e) {
-            console.error(e);
-            res.status(500).send("Internal Server Error");
+            console.error("Caught error:", e);
+            res.status(500).send({ error: "Internal Server Error" });
         }
     });
+    
+    
+    
     module.exports = router;

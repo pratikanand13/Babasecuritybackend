@@ -2,6 +2,7 @@ const { spawn } = require('child_process');
 
 const sastBearer = async (req, res, next) =>{
     try{
+        // const githubLink = req.user.organisationgithuburl
         const githubLink = req.user.organisationgithuburl
         const githubName = req.user.organisationname
         const wslDistribution = 'Ubuntu-22.04'
@@ -29,7 +30,7 @@ const sastBearer = async (req, res, next) =>{
 
         wslProcess.on('spawn', () => {
             console.log('WSL session started. Activating virtual environment and analysing your codebase...');
-            wslProcess.stdin.write(`${gitClone} && ${bearerCommand} && ${deleteDir}\n`);
+            wslProcess.stdin.write(`${gitClone} && ${bearerCommand} \n`);
             wslProcess.stdin.end();
         });
 
@@ -42,27 +43,21 @@ const sastBearer = async (req, res, next) =>{
             const stdout = Buffer.concat(stdoutBuffer).toString('utf8') 
             const stderr = stderrBuffer.join('');
             console.log('Code reading completed successfully. Processing output...');
-            console.log("Stdout", stdout);
+            const termOut = stderr + dataCopy 
             const severityEntries = stdout.split(/(CRITICAL:|HIGH:|MEDIUM:|LOW:)/).slice(1);
             const severityIssues = {};
 
             for (let i = 0; i < severityEntries.length; i += 2) {
-            const label = severityEntries[i].trim();  // Severity level (e.g., CRITICAL, HIGH, etc.)
-            const content = severityEntries[i + 1].trim();  // The content following the severity level
-    
-            // If the label doesn't exist in the severityIssues object, initialize it as an empty array
+            const label = severityEntries[i].trim()
+            const content = severityEntries[i + 1].trim()
             if (!severityIssues[label]) {
             severityIssues[label] = [];
             }
-
-    // Add the entire content block as a single string to the corresponding severity level
         severityIssues[label].push(content);
-}
-
-// Store the parsed data in req.scanResults
-            req.scanResults = severityIssues;
+            }           
+            req.termOut = termOut
+            req.severityIssues = severityIssues;
             req.stdout = stdout;
-            // console.log("scanres",req.scanResults)
             req.stderr = stderr;
             next(); 
         });
