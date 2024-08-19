@@ -15,44 +15,29 @@ RUN npm install -g @algolia/404-crawler
 RUN apt-get update && apt-get install -y \
     libnss3 \
     libatk1.0-0 \
-    libatk-bridge2.0-0 \
     libgbm1 \
     libasound2 \
-    libxshmfence1 \
+    libcairo2 \
     libxcomposite1 \
     libxrandr2 \
-    libdbus-glib-1-2 \
-    libgtk-3-0 \
-    libcups2 \
+    libxcursor1 \
     libdrm2 \
-    libxdamage1 \
-    libxkbcommon0 \
-    libvpx6 \
-    libevent-2.1-7 \
-    libx11-xcb1 \
-    libcairo2 \
-    libgdk-pixbuf2.0-0 \
-    libicu67 \
-    libwoff1 \
-    libopus0 \
-    libjpeg62-turbo \
-    libharfbuzz-icu0 \
-    libenchant-2-2 \
-    libsecret-1-0 \
-    libhyphen0 \
-    libflite1 \
-    libegl1 \
-    libglx0 \
-    libgudev-1.0-0 \
-    libffi7 \
-    libevdev2 \
-    libgles2 \
-    libx264-160 \
-    docker.io
+    libx11-6 \
+    libxtst6 \
+    libxrender1 \
+    libdbus-1-3 \
+    fonts-freefont-ttf
 
 # Add Bearer repository and install Bearer
 RUN echo "deb [trusted=yes] https://apt.fury.io/bearer/ /" | tee /etc/apt/sources.list.d/fury.list
 RUN apt-get update && apt-get install -y bearer
+
+# Install Nuclei
+RUN apt-get install -y wget && \
+    wget https://github.com/projectdiscovery/nuclei/releases/download/v2.9.8/nuclei_2.9.8_linux_amd64.zip && \
+    unzip nuclei_2.9.8_linux_amd64.zip && \
+    mv nuclei /usr/local/bin/ && \
+    chmod +x /usr/local/bin/nuclei
 
 # Install Playwright and its browsers
 RUN npx playwright install
@@ -63,8 +48,5 @@ COPY . .
 # Expose the port your app runs on
 EXPOSE 3000
 
-# Ensure entrypoint script has execution permissions
-RUN chmod +x /usr/src/app/entrypoint.sh
-
-# Define the entrypoint script as the container's entrypoint
-ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
+# Command to start your Node.js application
+CMD ["node", "app.js"]

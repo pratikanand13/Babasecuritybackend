@@ -146,11 +146,10 @@ router.get('/bearer', auth, sastBearer, async (req, res) => {
 router.post('/nuclei', auth, lrnuclei, async (req, res) => {
     try {
         const { severity, tag, url } = req.body;
-        const extractedIssues = req.extractedIssues.filter(issue => issue.trim() !== "");
+        const extractedIssues = req.data
         const terminal = req.terminalOut;
         const normalizedUrl = url;
         const payload = {
-            name: req.stdout,
             terminalOut: terminal,
             extractedIssues: extractedIssues,
             url: normalizedUrl

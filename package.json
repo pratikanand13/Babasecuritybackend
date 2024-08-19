@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node app.js"    
+    "dev": "node app.js"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +13,7 @@
     "ansi-regex": "^6.0.1",
     "axios": "^1.7.4",
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.8.0",
@@ -22,6 +23,5 @@
     "nodemon": "^3.1.4",
     "strip-ansi": "^7.1.0",
     "winston": "^3.14.2"
-    
   }
 }
